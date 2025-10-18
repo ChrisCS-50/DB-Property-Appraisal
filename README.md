@@ -20,6 +20,33 @@ You can start editing the page by modifying `app/page.tsx`. The page auto-update
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
 
+## Quick Start (Windows)
+
+For new contributors on Windows there's a small setup script to make installation straightforward.
+
+1) From PowerShell (run as Administrator if you don't have permissions):
+
+```powershell
+.\scripts\setup.ps1
+```
+
+This script will install Node (via winget) if missing, enable Corepack, install pnpm, and run `pnpm install`.
+
+2) Alternatively, you can run the one-liner using npm (provided Node is installed):
+
+```powershell
+npm run setup
+```
+
+3) Start the dev server:
+
+```powershell
+pnpm dev
+# or
+npm run dev
+```
+
+
 ## Learn More
 
 To learn more about Next.js, take a look at the following resources:
