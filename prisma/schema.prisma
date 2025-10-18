@@ -1,0 +1,116 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Property {
+  id            Int      @id @default(autoincrement())
+  folio         String   @unique
+  address       String?
+  landValue     Decimal? @db.Decimal(12, 2)
+  buildingValue Decimal? @db.Decimal(12, 2)
+  updatedAt     DateTime @default(now())
+
+  // relations
+  ownerId Int?
+  owner   Owner? @relation(fields: [ownerId], references: [id])
+
+  neighborhoodId Int?
+  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+
+  assessments  Assessment[]
+  improvements Improvement[]
+  sales        Sale[]
+
+  // indexes (must be block attributes inside the model)
+  @@index([ownerId])
+  @@index([neighborhoodId])
+  @@index([landValue])
+  @@index([buildingValue])
+}
+
+model Owner {
+  id         Int        @id @default(autoincrement())
+  name       String
+  phone      String?    @db.VarChar(30)
+  email      String?    @db.VarChar(120)
+  properties Property[]
+
+  @@index([name])
+}
+
+model Assessment {
+  id          Int      @id @default(autoincrement())
+  propertyId  Int
+  year        Int
+  marketValue Decimal  @db.Decimal(12, 2)
+  assessedVal Decimal  @db.Decimal(12, 2)
+  landVal     Decimal  @db.Decimal(12, 2)
+  bldgVal     Decimal  @db.Decimal(12, 2)
+  createdAt   DateTime @default(now())
+  property    Property @relation(fields: [propertyId], references: [id])
+
+  @@unique([propertyId, year])
+  @@index([year])
+  @@index([propertyId])
+}
+
+model Improvement {
+  id         Int      @id @default(autoincrement())
+  propertyId Int
+  type       String   @db.VarChar(60) // e.g., 'Pool', 'Roof', 'Garage'
+  yearBuilt  Int?
+  value      Decimal? @db.Decimal(12, 2)
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@index([type])
+  @@index([propertyId])
+}
+
+model Sale {
+  id         Int      @id @default(autoincrement())
+  propertyId Int
+  saleDate   DateTime
+  price      Decimal  @db.Decimal(12, 2)
+  docNumber  String?  @db.VarChar(40)
+  buyer      String?  @db.VarChar(120)
+  seller     String?  @db.VarChar(120)
+  property   Property @relation(fields: [propertyId], references: [id])
+
+  @@index([saleDate])
+  @@index([price])
+  @@index([propertyId])
+}
+
+model Neighborhood {
+  id         Int        @id @default(autoincrement())
+  code       String     @unique
+  name       String
+  properties Property[] // back-relation name aligned with Property.neighborhood
+
+  @@index([code, name]) // <-- added composite index for faster lookups
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  password  String // hashed
+  role      Role     @default(VIEWER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+}
+
+enum Role {
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+// End of prisma/schema.prisma
