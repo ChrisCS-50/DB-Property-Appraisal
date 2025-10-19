@@ -50,7 +50,11 @@ export default function Home() {
 
     return (
         <main className="mx-auto max-w-4xl p-6 space-y-8">
+<<<<<<< HEAD
             <h1 className="text-2xl font-semibold">Property Appraisal — Neon + Prisma Demo</h1>
+=======
+            <h1 className="text-2xl font-semibold">Property Appraisal</h1>
+>>>>>>> e1a91f2 (Testing commit - Latest Version)
             <p className="text-sm text-gray-600">
                 Enter values and click a button to run one of the 8 database actions.
             </p>
