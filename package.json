@@ -9,7 +9,8 @@
     "lint": "next lint",
     "seed": "tsx prisma/seed.ts",
     "db:push": "prisma db push",
-    "setup": "corepack enable && corepack prepare pnpm@latest --activate && pnpm install"
+    "setup": "corepack enable && corepack prepare pnpm@latest --activate && pnpm install",
+    "postinstall": "npx prisma generate --schema=prisma/schema.prisma"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
