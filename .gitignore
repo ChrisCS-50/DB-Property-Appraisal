@@ -26,6 +26,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
+.env
 .env*.local
 *.env
 
@@ -38,5 +39,5 @@ next-env.d.ts
 
 /lib/generated/prisma
 
-# Visual Studio workspace files (do not version)
+# Visual Studio workspace/cache
 .vs/
