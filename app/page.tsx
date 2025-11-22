@@ -81,7 +81,7 @@ export default function Home() {
 
             {/* 1. Upsert */}
             <section className="rounded border p-4">
-                <h2 className="font-medium">1) Upsert property by folio</h2>
+                <h2 className="font-medium">1) Insert property by folio</h2>
                 <div className="grid grid-cols-2 gap-3 mt-3">
                     <input className="border rounded px-3 py-2" placeholder="Folio *" value={folio} onChange={e => setFolio(e.target.value)} />
                     <input className="border rounded px-3 py-2" placeholder="Address" value={address} onChange={e => setAddress(e.target.value)} />
