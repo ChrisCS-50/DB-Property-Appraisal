@@ -5,12 +5,36 @@ import { useState } from 'react';
 
 type Json = Record<string, any>;
 
-async function call(action: string, payload: Json) {
+/*async function call(action: string, payload: Json) {
     const res = await fetch('/api/properties', {
         method: action === 'listLatest' ? 'GET' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: action === 'listLatest' ? undefined : JSON.stringify({ action, ...payload }),
     });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Request failed');
+    return data;
+}*/
+
+async function call(action: string, payload: Json = {}) {
+    // GET requests (list latest)
+    if (action === "listLatest") {
+        const res = await fetch('/api/properties?limit=50');
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Request failed');
+        return data;
+    }
+
+    // All other actions -> POST
+    const res = await fetch('/api/properties', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            action,
+            ...payload,   // <-- folio, min, max, newAddress, etc
+        }),
+    });
+
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed');
     return data;
@@ -190,7 +214,7 @@ export default function Home() {
             {/* Output */}
             <section className="rounded border p-4">
                 <h2 className="font-medium">Result</h2>
-                <pre className="mt-3 overflow-auto max-h-80 text-sm bg-gray-50 p-3 rounded border">
+                <pre className="mt-3 overflow-auto max-h-80 text-sm bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 p-3 rounded border border-gray-200 dark:border-gray-700">
                     {output || 'Run an action to see JSON output here.'}
                 </pre>
             </section>
@@ -219,12 +243,12 @@ export default function Home() {
                         Avg Sale Price by Neighborhood
                     </a>
                     <a
-                        href="/api/sql?q=property_by_folio&folio=F1001"
+                        href="/api/sql?q=property_by_folio&folio=XFA2025"
                         target="_blank"
                         rel="noopener noreferrer"
                         className="px-3 py-2 bg-black text-white rounded"
                     >
-                        Property by Folio (F1001)
+                        Property by Folio (XFA2000)
                     </a>
                     <a
                         href="/api/sql?q=sales_in_year&year=2024"

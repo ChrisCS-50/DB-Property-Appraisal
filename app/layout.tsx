@@ -26,8 +26,8 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'Next Shadcn Template',
-  description: 'NextJs template with shadcn/ui'
+  title: 'Property Appraisal DB UI',
+  description: 'NextJs for Property Appraisal'
 }
 
 export default function RootLayout({

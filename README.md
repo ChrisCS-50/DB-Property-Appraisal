@@ -205,3 +205,43 @@ LEFT JOIN LATERAL (
   ORDER BY a1.year DESC
   LIMIT 1
 ) a ON TRUE;
+
+
+
+Sample Neighborhoods
+-- Neighborhoods
+INSERT INTO "Neighborhood" (code, name) VALUES
+('NBH-001', 'Downtown'),
+('NBH-002', 'Riverside'),
+('NBH-003', 'Lakeside');
+
+Sample Owners
+-- Owners
+INSERT INTO "Owner" (name, phone, email) VALUES
+('John Doe', '555-1001', 'john@example.com'),
+('Mary Johnson', '555-1002', 'mary@example.com'),
+('Alex Chen', '555-1003', 'alex@example.com');
+
+Sample Properties
+INSERT INTO "Property" (folio, address, "landValue", "buildingValue", "neighborhoodId", "ownerId")
+VALUES
+('FOL-1001', '123 Main St', 150000, 350000, 1, 1),
+('FOL-1002', '456 Oak Ave', 120000, 280000, 1, 2),
+('FOL-1003', '789 Pine Rd', 200000, 400000, 2, 3),
+('FOL-1004', '321 Maple Ln', 90000, 250000, 3, 1),
+('FOL-1005', '654 Birch Dr', 110000, 310000, 2, 2),
+('FOL-1006', '987 Cedar Ct', 175000, 390000, 1, 3),
+('FOL-1007', '222 Elm St', 95000, 220000, 3, 1),
+('FOL-1008', '333 Spruce Blvd', 130000, 345000, 2, 2),
+('FOL-1009', '444 Walnut Way', 160000, 410000, 3, 3),
+('FOL-1010', '555 Chestnut Cir', 140000, 360000, 1, 1),
+('FOL-1011', '666 Cypress Ct', 185000, 420000, 2, 2),
+('FOL-1012', '777 Magnolia Ave', 155000, 370000, 3, 3),
+('FOL-1013', '888 Palm Blvd', 100000, 290000, 1, 1),
+('FOL-1014', '999 Dogwood Ln', 125000, 310000, 2, 2),
+('FOL-1015', '1010 Redwood Dr', 210000, 480000, 3, 3),
+('FOL-1016', '1111 Willow Way', 95000, 220000, 1, 1),
+('FOL-1017', '1212 Aspen Cir', 135000, 315000, 2, 2),
+('FOL-1018', '1313 Poplar Rd', 145000, 335000, 3, 3),
+('FOL-1019', '1414 Beech Ct', 160000, 355000, 1, 2),
+('FOL-1020', '1515 Sycamore St', 170000, 390000, 2, 3);
