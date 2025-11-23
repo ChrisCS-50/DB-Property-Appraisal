@@ -24,6 +24,13 @@ function decimalUpdate(
   return Number.isFinite(n) ? { set: n } : undefined;
 }
 
+// NEW: helper for integer values like ownerId, year
+function toIntOrUndef(v: any): number | undefined {
+  if (v === "" || v === undefined || v === null) return undefined;
+  const n = Number(v);
+  return Number.isInteger(n) ? n : undefined;
+}
+
 const ok = (data: any, status = 200) =>
   NextResponse.json({ ok: true, data }, { status });
 const bad = (msg: string, status = 400) =>
@@ -53,6 +60,10 @@ export async function POST(req: Request) {
 
     switch (action) {
       // 1) Upsert (insert or update) a property by folio
+      //    Also:
+      //      - optionally create/attach Owner (name/phone/email)
+      //      - optionally create a Sale row (saleDate/price)
+      //      - optionally upsert an Assessment row (assessmentYear)
       case "upsert": {
         const {
           folio,
@@ -60,6 +71,19 @@ export async function POST(req: Request) {
           landValue,
           buildingValue,
           zipCode,
+          ownerId,       // existing owner id (optional)
+
+          // NEW owner fields
+          ownerName,
+          ownerPhone,
+          ownerEmail,
+
+          // NEW sale fields
+          saleDate,
+          salePrice,
+
+          // NEW assessment field
+          assessmentYear,
         } = body;
 
         if (!folio) return bad("folio is required");
@@ -69,31 +93,95 @@ export async function POST(req: Request) {
         const lvUpdate = decimalUpdate(landValue);
         const bvUpdate = decimalUpdate(buildingValue);
 
+        // 1) Determine ownerId to use (existing or newly created)
+        let ownerIdNum = toIntOrUndef(ownerId);
+
+        if (!ownerIdNum && (ownerName || ownerPhone || ownerEmail)) {
+          // Create a new Owner if we don't have an ID but we do have owner info
+          const newOwner = await prisma.owner.create({
+            data: {
+              name: (ownerName && String(ownerName).trim()) || "Unknown Owner",
+              phone: ownerPhone ? String(ownerPhone).trim() : undefined,
+              email: ownerEmail ? String(ownerEmail).trim() : undefined,
+            },
+          });
+          ownerIdNum = newOwner.id;
+        }
+
+        // 2) Upsert the Property
         const property = await prisma.property.upsert({
           where: { folio },
           create: {
             folio,
-            address: address?.trim() || undefined,
-            zipCode: zipCode?.trim() || null,
-            ...(lvCreate !== undefined
-              ? { landValue: lvCreate }
-              : {}),
-            ...(bvCreate !== undefined
-              ? { buildingValue: bvCreate }
-              : {}),
+            ...(address ? { address: address.trim() } : {}),
+            ...(zipCode ? { zipCode: zipCode.trim() } : {}),
+            ...(ownerIdNum !== undefined ? { ownerId: ownerIdNum } : {}),
+            ...(lvCreate !== undefined ? { landValue: lvCreate } : {}),
+            ...(bvCreate !== undefined ? { buildingValue: bvCreate } : {}),
           },
           update: {
-            address: address?.trim() || undefined,
-            zipCode: zipCode?.trim() || null,
-            ...(lvUpdate !== undefined
-              ? { landValue: lvUpdate }
+            ...(address !== undefined
+              ? { address: address?.trim() || null }
               : {}),
-            ...(bvUpdate !== undefined
-              ? { buildingValue: bvUpdate }
+            ...(zipCode !== undefined
+              ? { zipCode: zipCode?.trim() || null }
               : {}),
+            ...(ownerIdNum !== undefined ? { ownerId: ownerIdNum } : {}),
+            ...(lvUpdate !== undefined ? { landValue: lvUpdate } : {}),
+            ...(bvUpdate !== undefined ? { buildingValue: bvUpdate } : {}),
             updatedAt: new Date(),
           },
         });
+
+        // 3) Optionally create a Sale row
+        if (saleDate && salePrice !== undefined && salePrice !== "") {
+          const priceNum = toNumberOrUndef(salePrice);
+          if (priceNum !== undefined) {
+            await prisma.sale.create({
+              data: {
+                propertyId: property.id,
+                saleDate: new Date(String(saleDate)),
+                price: priceNum,
+                // docNumber, buyer, seller can be added later if desired
+              },
+            });
+          }
+        }
+
+        // 4) Optionally upsert an Assessment row
+        if (assessmentYear) {
+          const yearNum = toIntOrUndef(assessmentYear);
+          if (yearNum !== undefined) {
+            // Use provided land/building values or fallback to DB/current values
+            const land = lvCreate ?? Number(property.landValue ?? 0);
+            const bldg = bvCreate ?? Number(property.buildingValue ?? 0);
+            const market = land + bldg;
+            const assessed = market; // simple assumption for project
+
+            await prisma.assessment.upsert({
+              where: {
+                propertyId_year: {
+                  propertyId: property.id,
+                  year: yearNum,
+                },
+              },
+              update: {
+                marketValue: market,
+                assessedVal: assessed,
+                landVal: land,
+                bldgVal: bldg,
+              },
+              create: {
+                propertyId: property.id,
+                year: yearNum,
+                marketValue: market,
+                assessedVal: assessed,
+                landVal: land,
+                bldgVal: bldg,
+              },
+            });
+          }
+        }
 
         return ok({ property });
       }

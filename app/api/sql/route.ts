@@ -103,7 +103,7 @@ export async function GET(req: Request) {
         return ok(rows);
     }
 
-      // 3) List all properties ordered by folio (no condition)
+      // 3) List all properties ordered by folio
       case "property_by_folio": {
         const rows = await prisma.$queryRaw`
           SELECT *

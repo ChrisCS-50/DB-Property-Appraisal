@@ -20,7 +20,7 @@ async function call(action: string, payload: Json = {}) {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       action,
-      ...payload, // folio, min, max, newAddress, etc.
+      ...payload,
     }),
   });
 
@@ -33,9 +33,20 @@ export default function Home() {
   // state for all forms
   const [folio, setFolio] = useState('');
   const [address, setAddress] = useState('');
-  const [zip, setZip] = useState(''); // NEW: ZIP code for property
+  const [zip, setZip] = useState('');               // Property.zipCode
+  const [ownerId, setOwnerId] = useState('');       // optional existing ownerId
+  const [ownerName, setOwnerName] = useState('');   // NEW
+  const [ownerPhone, setOwnerPhone] = useState(''); // NEW
+  const [ownerEmail, setOwnerEmail] = useState(''); // NEW
+
   const [landValue, setLandValue] = useState('');
   const [buildingValue, setBuildingValue] = useState('');
+
+  const [saleDate, setSaleDate] = useState('');     // NEW
+  const [salePrice, setSalePrice] = useState('');   // NEW
+
+  const [assessmentYear, setAssessmentYear] = useState(''); // NEW
+
   const [minLand, setMinLand] = useState('');
   const [maxLand, setMaxLand] = useState('');
   const [newAddress, setNewAddress] = useState('');
@@ -62,17 +73,35 @@ export default function Home() {
     }
   }
 
+  // Helper to run /api/sql queries into the Result panel
+  async function runSql(
+    name: string,
+    q: string,
+    params: Record<string, string> = {}
+  ) {
+    const search = new URLSearchParams({ q, ...params });
+    return run(name, async () => {
+      const res = await fetch(`/api/sql?${search.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Request failed');
+      return data;
+    });
+  }
+
   return (
     <main className="mx-auto max-w-4xl p-6 space-y-8">
       <h1 className="text-2xl font-semibold">Property Appraisal</h1>
       <p className="text-sm text-gray-600">
-        Enter values and click a button to run one of the 8 database actions.
+        Enter values and click a button to run one of the database actions.
       </p>
 
-      {/* 1. Upsert */}
+      {/* 1. Upsert full record */}
       <section className="rounded border p-4">
-        <h2 className="font-medium">1) Insert property by folio</h2>
-        <div className="grid grid-cols-2 gap-3 mt-3">
+        <h2 className="font-medium">1) Insert / Upsert Property (with Owner, Sale, Assessment)</h2>
+
+        {/* Property fields */}
+        <h3 className="mt-2 text-sm font-semibold">Property</h3>
+        <div className="grid grid-cols-2 gap-3 mt-2">
           <input
             className="border rounded px-3 py-2"
             placeholder="Folio *"
@@ -93,6 +122,12 @@ export default function Home() {
           />
           <input
             className="border rounded px-3 py-2"
+            placeholder="Existing Owner ID (optional)"
+            value={ownerId}
+            onChange={e => setOwnerId(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2"
             placeholder="Land Value"
             value={landValue}
             onChange={e => setLandValue(e.target.value)}
@@ -104,22 +139,81 @@ export default function Home() {
             onChange={e => setBuildingValue(e.target.value)}
           />
         </div>
+
+        {/* Owner fields */}
+        <h3 className="mt-4 text-sm font-semibold">Owner (optional – will create if no Owner ID)</h3>
+        <div className="grid grid-cols-3 gap-3 mt-2">
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Owner Name"
+            value={ownerName}
+            onChange={e => setOwnerName(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Owner Phone"
+            value={ownerPhone}
+            onChange={e => setOwnerPhone(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Owner Email"
+            value={ownerEmail}
+            onChange={e => setOwnerEmail(e.target.value)}
+          />
+        </div>
+
+        {/* Sale fields */}
+        <h3 className="mt-4 text-sm font-semibold">Sale (optional)</h3>
+        <div className="grid grid-cols-2 gap-3 mt-2">
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Sale Date (YYYY-MM-DD)"
+            value={saleDate}
+            onChange={e => setSaleDate(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Sale Price"
+            value={salePrice}
+            onChange={e => setSalePrice(e.target.value)}
+          />
+        </div>
+
+        {/* Assessment fields */}
+        <h3 className="mt-4 text-sm font-semibold">Assessment (optional)</h3>
+        <div className="grid grid-cols-1 gap-3 mt-2">
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Assessment Year (e.g. 2024)"
+            value={assessmentYear}
+            onChange={e => setAssessmentYear(e.target.value)}
+          />
+        </div>
+
         <button
-          className="mt-3 rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+          className="mt-4 rounded bg-black px-4 py-2 text-white disabled:opacity-60"
           disabled={!folio || loading === 'upsert'}
           onClick={() =>
             run('upsert', () =>
               call('upsert', {
                 folio: folio.trim(),
                 address: address.trim() || null,
-                zipCode: zip.trim() || null, // NEW: send zipCode to API
+                zipCode: zip.trim() || null,
                 landValue,
                 buildingValue,
+                ownerId: ownerId.trim() || null,
+                ownerName: ownerName.trim() || null,
+                ownerPhone: ownerPhone.trim() || null,
+                ownerEmail: ownerEmail.trim() || null,
+                saleDate: saleDate.trim() || null,
+                salePrice,
+                assessmentYear: assessmentYear.trim() || null,
               })
             )
           }
         >
-          {loading === 'upsert' ? 'Saving…' : 'Save / Upsert'}
+          {loading === 'upsert' ? 'Saving…' : 'Save / Upsert All'}
         </button>
       </section>
 
@@ -320,45 +414,51 @@ export default function Home() {
         </pre>
       </section>
 
-      {/* SQL Query Links */}
+      {/* SQL-Based Reports into the same Result box */}
       <section className="rounded border p-4">
-        <h2 className="font-medium mb-3">Direct SQL Query Links</h2>
+        <h2 className="font-medium mb-3">SQL-Based Reports</h2>
         <p className="text-sm text-gray-600 mb-3">
-          These open the raw JSON from <code>/api/sql</code> in a new tab.
+          These run the <code>/api/sql</code> queries and show the output in the Result section above.
         </p>
         <div className="flex flex-wrap gap-2">
-          <a
-            href="/api/sql?q=properties_with_owner"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 bg-black text-white rounded"
+          <button
+            className="px-3 py-2 bg-black text-white rounded disabled:opacity-60"
+            disabled={loading === 'properties_with_owner'}
+            onClick={() =>
+              runSql('properties_with_owner', 'properties_with_owner')
+            }
           >
             Properties with Owner
-          </a>
-          <a
-            href="/api/sql?q=avg_sale_price_by_zip"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 bg-black text-white rounded"
+          </button>
+          <button
+            className="px-3 py-2 bg-black text-white rounded disabled:opacity-60"
+            disabled={loading === 'avg_sale_price_by_zip'}
+            onClick={() =>
+              runSql('avg_sale_price_by_zip', 'avg_sale_price_by_zip')
+            }
           >
             Avg Sale Price by Zip
-          </a>
-          <a
-            href="/api/sql?q=property_by_folio"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 bg-black text-white rounded"
+          </button>
+          <button
+            className="px-3 py-2 bg-black text-white rounded disabled:opacity-60"
+            onClick={() =>
+              runSql(
+                'property_by_folio_sql',
+                'property_by_folio',
+                folio ? { folio: folio.trim() } : {}
+              )
+            }
           >
-            Property by Folio
-          </a>
-          <a
-            href="/api/sql?q=sales_history"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-3 py-2 bg-black text-white rounded"
+            Property List
+          </button>
+          <button
+            className="px-3 py-2 bg-black text-white rounded disabled:opacity-60"
+            onClick={() =>
+              runSql('sales_history', 'sales_history')
+            }
           >
             Sales History
-          </a>
+          </button>
         </div>
       </section>
     </main>
