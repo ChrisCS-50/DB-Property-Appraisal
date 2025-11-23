@@ -54,6 +54,10 @@ export default function Home() {
   const [threshold, setThreshold] = useState('');
   const [limit, setLimit] = useState('10');
 
+  // 🔹 NEW: fields for stored procedure sp_adjust_land_values_by_zip
+  const [bulkZip, setBulkZip] = useState('');
+  const [bulkPercent, setBulkPercent] = useState('');
+
   const [output, setOutput] = useState<string>('');
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -403,6 +407,44 @@ export default function Home() {
           }
         >
           {loading === 'listLatest' ? 'Loading…' : 'Fetch'}
+        </button>
+      </section>
+
+      {/* 9. Bulk adjust land by ZIP (Stored Procedure) */}
+      <section className="rounded border p-4">
+        <h2 className="font-medium">
+          9) Bulk adjust land value by ZIP (Stored Procedure)
+        </h2>
+        <p className="text-xs text-gray-600 mt-1">
+          Calls <code>sp_adjust_land_values_by_zip(zipCode, percent)</code> in the database.
+        </p>
+        <div className="grid grid-cols-2 gap-3 mt-3">
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="ZIP Code *"
+            value={bulkZip}
+            onChange={e => setBulkZip(e.target.value)}
+          />
+          <input
+            className="border rounded px-3 py-2"
+            placeholder="Percent (e.g., 5 or -10)"
+            value={bulkPercent}
+            onChange={e => setBulkPercent(e.target.value)}
+          />
+        </div>
+        <button
+          className="mt-3 rounded bg-black px-4 py-2 text-white disabled:opacity-60"
+          disabled={!bulkZip || loading === 'adjustLandByZip'}
+          onClick={() =>
+            run('adjustLandByZip', () =>
+              call('adjustLandByZip', {
+                zipCode: bulkZip.trim(),
+                percent: bulkPercent,
+              })
+            )
+          }
+        >
+          {loading === 'adjustLandByZip' ? 'Running…' : 'Run Stored Procedure'}
         </button>
       </section>
 

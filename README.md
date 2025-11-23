@@ -1,31 +1,119 @@
+📘 Property Appraisal Database Application
 
+Final Project – COP4710: Database Management
+
+This application is a full-stack property appraisal tool designed for storing, updating, querying, and reporting property-related data. It uses:
+
+Next.js 14 (App Router)
+
+Prisma ORM
+
+PostgreSQL (NeonDB)
+
+TailwindCSS + ShadCN UI
+
+A complete relational database with:
+
+Property
+
+Owner
+
+Assessment
+
+Sale
+
+Improvement
+
+User (auth-ready)
+
+A reporting API powered by SQL queries & materialized view
+
+A stored procedure for bulk land-value adjustments
+
+🚀 Features
+✔ Full CRUD for Properties
+
+Insert, update, delete, or query properties using a friendly UI.
+
+✔ Owner Linking or Auto-Creation
+
+User can:
+
+Provide an existing owner ID, or
+
+Enter name/phone/email to auto-create a new owner
+
+✔ Sales & Assessment Recording
+
+The upsert action can create:
+
+Optional sale record
+
+Optional assessment record
+
+✔ Advanced SQL Reporting
+
+UI buttons run:
+
+Properties with owners
+
+Avg sale price by ZIP
+
+Property list by folio
+
+Sales history
+
+All results show directly in the Results output panel.
+
+✔ Stored Procedure Integration
+
+Bulk land-value adjustments by ZIP code are executed from the UI using:
+
+CALL sp_adjust_land_values_by_zip(zip, percent)
+
+🏗 Project Structure
+app/
+  api/
+    properties/route.ts     # Main CRUD + SP execution
+    sql/route.ts            # SQL reporting queries
+  page.tsx                  # UI
+prisma/
+  schema.prisma             # Prisma schema
+.env.local                  # Database connection URL
+README.md                   # This file
+
+⚙️ Installation & Setup
+1️⃣ Clone the Repo
+git clone https://github.com/ChrisCS-50/DB-Property-Appraisal/tree/main-v2
+
+2️⃣ Install Dependencies
+npm install
+
+3️⃣ Create .env.local
+DATABASE_URL="postgres://<user>:<password>@<host>/<dbname>?sslmode=require"
+
+4️⃣ Sync Prisma
+npx prisma db pull
+npx prisma generate
+
+5️⃣ Start Application
 npm run dev
 
+🗄️ Database Schema (FULL SQL)
 
+This section provides ALL SQL needed to completely rebuild the database as required by this version of the application.
 
--- =========================================================
--- 1) Enum for roles (used by "User")
--- =========================================================
+Run these SQL blocks in order on your NeonDB console.
+
+🔷 1. ENUM: User Role
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'Role') THEN
-    CREATE TYPE "Role" AS ENUM ('ADMIN','EDITOR','VIEWER');
+    CREATE TYPE "Role" AS ENUM ('ADMIN', 'EDITOR', 'VIEWER');
   END IF;
 END$$;
 
--- =========================================================
--- 2) Core dimension tables: Neighborhood, Owner
--- =========================================================
-DROP TABLE IF EXISTS "Zip_Code" CASCADE;
-CREATE TABLE "Zip_Code" (
-  id   SERIAL PRIMARY KEY,
-  code TEXT NOT NULL,
-);
-
--- unique + composite index per screenshot
-CREATE UNIQUE INDEX "Neighborhood_code_key" ON "Neighborhood"(code);
-CREATE INDEX "Neighborhood_code_name_idx" ON "Neighborhood"(code, name);
-
+🔷 2. OWNER TABLE
 DROP TABLE IF EXISTS "Owner" CASCADE;
 CREATE TABLE "Owner" (
   id    SERIAL PRIMARY KEY,
@@ -34,40 +122,33 @@ CREATE TABLE "Owner" (
   email VARCHAR(120)
 );
 
--- index on name per screenshot
 CREATE INDEX "Owner_name_idx" ON "Owner"(name);
 
--- =========================================================
--- 3) Property
--- =========================================================
+🔷 3. PROPERTY TABLE
+
+Includes zipCode and no longer references Neighborhood.
+
 DROP TABLE IF EXISTS "Property" CASCADE;
 CREATE TABLE "Property" (
   id             SERIAL PRIMARY KEY,
   folio          TEXT NOT NULL,
   address        TEXT,
+  "zipCode"      TEXT,
   "landValue"    NUMERIC(12,2),
   "buildingValue" NUMERIC(12,2),
   "updatedAt"    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  "neighborhoodId" INTEGER,
-  "ownerId"        INTEGER,
-  CONSTRAINT "Property_neighborhoodId_fkey"
-    FOREIGN KEY ("neighborhoodId") REFERENCES "Neighborhood"(id)
-    ON UPDATE CASCADE ON DELETE SET NULL,
+  "ownerId"      INTEGER,
   CONSTRAINT "Property_ownerId_fkey"
     FOREIGN KEY ("ownerId") REFERENCES "Owner"(id)
     ON UPDATE CASCADE ON DELETE SET NULL
 );
 
--- unique + supporting indexes per screenshot
 CREATE UNIQUE INDEX "Property_folio_key" ON "Property"(folio);
-CREATE INDEX "Property_neighborhoodId_idx" ON "Property"("neighborhoodId");
-CREATE INDEX "Property_ownerId_idx"        ON "Property"("ownerId");
-CREATE INDEX "Property_landValue_idx"      ON "Property"("landValue");
-CREATE INDEX "Property_buildingValue_idx"  ON "Property"("buildingValue");
+CREATE INDEX "Property_ownerId_idx"       ON "Property"("ownerId");
+CREATE INDEX "Property_landValue_idx"     ON "Property"("landValue");
+CREATE INDEX "Property_buildingValue_idx" ON "Property"("buildingValue");
 
--- =========================================================
--- 4) Assessment
--- =========================================================
+🔷 4. ASSESSMENT TABLE
 DROP TABLE IF EXISTS "Assessment" CASCADE;
 CREATE TABLE "Assessment" (
   id           SERIAL PRIMARY KEY,
@@ -85,13 +166,10 @@ CREATE TABLE "Assessment" (
     UNIQUE ("propertyId", year)
 );
 
--- indexes per screenshot
 CREATE INDEX "Assessment_propertyId_idx" ON "Assessment"("propertyId");
 CREATE INDEX "Assessment_year_idx"       ON "Assessment"(year);
 
--- =========================================================
--- 5) Improvement
--- =========================================================
+🔷 5. IMPROVEMENT TABLE
 DROP TABLE IF EXISTS "Improvement" CASCADE;
 CREATE TABLE "Improvement" (
   id          SERIAL PRIMARY KEY,
@@ -104,13 +182,10 @@ CREATE TABLE "Improvement" (
     ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- indexes per screenshot
 CREATE INDEX "Improvement_propertyId_idx" ON "Improvement"("propertyId");
 CREATE INDEX "Improvement_type_idx"       ON "Improvement"(type);
 
--- =========================================================
--- 6) Sale
--- =========================================================
+🔷 6. SALE TABLE
 DROP TABLE IF EXISTS "Sale" CASCADE;
 CREATE TABLE "Sale" (
   id          SERIAL PRIMARY KEY,
@@ -126,51 +201,29 @@ CREATE TABLE "Sale" (
     ON UPDATE CASCADE ON DELETE RESTRICT
 );
 
--- indexes per screenshot
 CREATE INDEX "Sale_propertyId_idx" ON "Sale"("propertyId");
 CREATE INDEX "Sale_saleDate_idx"   ON "Sale"("saleDate");
 CREATE INDEX "Sale_price_idx"      ON "Sale"(price);
 
--- =========================================================
--- 7) User (for auth)
--- =========================================================
+🔷 7. USER TABLE
 DROP TABLE IF EXISTS "User" CASCADE;
 CREATE TABLE "User" (
   id         SERIAL PRIMARY KEY,
   email      TEXT NOT NULL,
   name       TEXT,
-  password   TEXT NOT NULL,           -- bcrypt hash
+  password   TEXT NOT NULL,           -- hashed password
   role       "Role" NOT NULL DEFAULT 'VIEWER'::"Role",
   "createdAt" TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
   "updatedAt" TIMESTAMP NOT NULL
 );
 
--- unique + index per screenshot
 CREATE UNIQUE INDEX "User_email_key" ON "User"(email);
 CREATE INDEX        "User_email_idx" ON "User"(email);
 
--- =========================================================
--- 8) Prisma migrations table (as shown)
---    (Only include if you really need to recreate it manually.
---     Normally Prisma manages this itself.)
--- =========================================================
-DROP TABLE IF EXISTS "_prisma_migrations" CASCADE;
-CREATE TABLE "_prisma_migrations" (
-  id                   VARCHAR(36) PRIMARY KEY,
-  checksum             VARCHAR(64) NOT NULL,
-  finished_at          TIMESTAMPTZ,
-  migration_name       VARCHAR(255) NOT NULL,
-  logs                 TEXT,
-  rolled_back_at       TIMESTAMPTZ,
-  started_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
-  applied_steps_count  INTEGER NOT NULL DEFAULT 0
-);
+🔷 8. SUMMARY VIEW (UPDATED)
 
--- PK already unique; Prisma usually creates this automatically.
+We removed all Neighborhood fields and added zipCode.
 
--- =========================================================
--- 9) View: v_property_summary (your existing one)
--- =========================================================
 DROP VIEW IF EXISTS "v_property_summary";
 
 CREATE VIEW "v_property_summary" AS
@@ -178,7 +231,7 @@ SELECT
   p.id,
   p.folio,
   p.address,
-  p."zipCode"       AS zip_code,            -- from Property.zipCode
+  p."zipCode"       AS zip_code,
   p."landValue"     AS land_value,
   p."buildingValue" AS building_value,
   p."updatedAt"     AS updated_at,
@@ -203,42 +256,74 @@ LEFT JOIN LATERAL (
   LIMIT 1
 ) a ON TRUE;
 
+🔷 9. STORED PROCEDURE
 
+Bulk Land Value Adjustment by ZIP Code
 
-Sample Neighborhoods
--- Neighborhoods
-INSERT INTO "Neighborhood" (code, name) VALUES
-('NBH-001', 'Downtown'),
-('NBH-002', 'Riverside'),
-('NBH-003', 'Lakeside');
+CREATE OR REPLACE PROCEDURE sp_adjust_land_values_by_zip(
+    p_zip_code   TEXT,
+    p_percent    NUMERIC
+)
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  UPDATE "Property"
+  SET "landValue" = "landValue" * (1 + p_percent / 100.0),
+      "updatedAt" = NOW()
+  WHERE "zipCode" = p_zip_code
+    AND "landValue" IS NOT NULL;
+END;
+$$;
 
-Sample Owners
--- Owners
-INSERT INTO "Owner" (name, phone, email) VALUES
-('John Doe', '555-1001', 'john@example.com'),
-('Mary Johnson', '555-1002', 'mary@example.com'),
-('Alex Chen', '555-1003', 'alex@example.com');
+🧪 Sample Data (Optional)
 
-Sample Properties
-INSERT INTO "Property" (folio, address, "landValue", "buildingValue", "neighborhoodId", "ownerId")
-VALUES
-('FOL-1001', '123 Main St', 150000, 350000, 1, 1),
-('FOL-1002', '456 Oak Ave', 120000, 280000, 1, 2),
-('FOL-1003', '789 Pine Rd', 200000, 400000, 2, 3),
-('FOL-1004', '321 Maple Ln', 90000, 250000, 3, 1),
-('FOL-1005', '654 Birch Dr', 110000, 310000, 2, 2),
-('FOL-1006', '987 Cedar Ct', 175000, 390000, 1, 3),
-('FOL-1007', '222 Elm St', 95000, 220000, 3, 1),
-('FOL-1008', '333 Spruce Blvd', 130000, 345000, 2, 2),
-('FOL-1009', '444 Walnut Way', 160000, 410000, 3, 3),
-('FOL-1010', '555 Chestnut Cir', 140000, 360000, 1, 1),
-('FOL-1011', '666 Cypress Ct', 185000, 420000, 2, 2),
-('FOL-1012', '777 Magnolia Ave', 155000, 370000, 3, 3),
-('FOL-1013', '888 Palm Blvd', 100000, 290000, 1, 1),
-('FOL-1014', '999 Dogwood Ln', 125000, 310000, 2, 2),
-('FOL-1015', '1010 Redwood Dr', 210000, 480000, 3, 3),
-('FOL-1016', '1111 Willow Way', 95000, 220000, 1, 1),
-('FOL-1017', '1212 Aspen Cir', 135000, 315000, 2, 2),
-('FOL-1018', '1313 Poplar Rd', 145000, 335000, 3, 3),
-('FOL-1019', '1414 Beech Ct', 160000, 355000, 1, 2),
-('FOL-1020', '1515 Sycamore St', 170000, 390000, 2, 3);
+You may insert your own or use generated seed data.
+The app does not require seed data, but empty tables will mean empty query results until users begin inserting.
+
+🔌 API Endpoints
+Endpoint	Purpose
+/api/properties	CRUD, owner linking, sale creation, assessment creation, stored procedure execution
+/api/sql	Raw SQL reporting queries
+/api/reports/summary	Returns v_property_summary view
+🖥 UI Actions Supported
+CRUD
+
+Insert / Upsert property (+ owner / assessment / sale)
+
+Get property by folio
+
+Range search by landValue
+
+Update address
+
+Adjust land value %
+
+Delete by folio
+
+Count above buildingValue threshold
+
+SQL Reports
+
+Rendered inside the UI Result panel:
+
+Properties with owner
+
+Avg sale price by zip
+
+Property list (all folios)
+
+Sales history
+
+Stored Procedure
+
+Executed through UI input:
+
+Bulk land value adjust by ZIP and percent
+
+📝 Developer Notes
+If the DB Schema Changes
+
+Run:
+
+npx prisma db pull
+npx prisma generate

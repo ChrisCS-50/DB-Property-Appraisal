@@ -293,6 +293,35 @@ export async function POST(req: Request) {
         return ok({ property });
       }
 
+      // 9) Bulk adjust land values by ZIP code using stored procedure
+      case "adjustLandByZip": {
+        const { zipCode, percent } = body;
+
+        if (!zipCode || String(zipCode).trim() === "") {
+          return bad("zipCode is required");
+        }
+
+        const pct = toNumberOrUndef(percent);
+        if (pct === undefined) {
+          return bad("percent is required and must be numeric");
+        }
+
+        // Call the stored procedure in Postgres via Prisma
+        const result = await prisma.$executeRawUnsafe(
+          'CALL sp_adjust_land_values_by_zip($1, $2)',
+          String(zipCode).trim(),
+          pct
+        );
+
+        // result is usually number of rows affected (depends on driver)
+        return ok({
+          message: "Land values adjusted successfully",
+          zipCode: String(zipCode).trim(),
+          percent: pct,
+          rowsAffected: Number(result ?? 0),
+        });
+      }
+
       default:
         return bad("Unknown action");
     }
