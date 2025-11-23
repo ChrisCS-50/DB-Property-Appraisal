@@ -11,6 +11,7 @@ model Property {
   id            Int      @id @default(autoincrement())
   folio         String   @unique
   address       String?
+  zipCode       String?  @db.VarChar(10)        // NEW: matches the DB column you added
   landValue     Decimal? @db.Decimal(12, 2)
   buildingValue Decimal? @db.Decimal(12, 2)
   updatedAt     DateTime @default(now())
@@ -19,16 +20,15 @@ model Property {
   ownerId Int?
   owner   Owner? @relation(fields: [ownerId], references: [id])
 
-  neighborhoodId Int?
-  neighborhood   Neighborhood? @relation(fields: [neighborhoodId], references: [id])
+  // removed neighborhoodId / Neighborhood relation because table no longer exists
 
   assessments  Assessment[]
   improvements Improvement[]
   sales        Sale[]
 
-  // indexes (must be block attributes inside the model)
+  // indexes
   @@index([ownerId])
-  @@index([neighborhoodId])
+  @@index([zipCode])
   @@index([landValue])
   @@index([buildingValue])
 }
@@ -86,20 +86,11 @@ model Sale {
   @@index([propertyId])
 }
 
-model Neighborhood {
-  id         Int        @id @default(autoincrement())
-  code       String     @unique
-  name       String
-  properties Property[] // back-relation name aligned with Property.neighborhood
-
-  @@index([code, name]) // <-- added composite index for faster lookups
-}
-
 model User {
   id        Int      @id @default(autoincrement())
   email     String   @unique
   name      String?
-  password  String // hashed
+  password  String   // hashed
   role      Role     @default(VIEWER)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

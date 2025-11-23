@@ -10,16 +10,6 @@ const ok = (data: any, status = 200) =>
 const bad = (message: string, status = 400) =>
   NextResponse.json({ ok: false, error: message }, { status });
 
-const asNumber = (v: unknown) => {
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-};
-
-const asDate = (v: unknown) => {
-  const d = new Date(String(v));
-  return isNaN(d.getTime()) ? null : d;
-};
-
 // ---------- GET query params schema ----------
 const qSchema = z.object({
   q: z.string().optional().default(""),
@@ -82,60 +72,60 @@ export async function GET(req: Request) {
     const { q, folio, year, minPrice } = parsed.data;
 
     switch (q) {
-      // 1) SELECT with JOIN
+      // 1) SELECT with JOIN: properties + owner
       case "properties_with_owner": {
         const rows = await prisma.$queryRaw`
           SELECT p.id,
                  p.folio,
                  p.address,
+                 p."zipCode" AS zip_code,
                  o.name AS owner_name
           FROM "Property" p
-          JOIN "Owner"   o ON o.id = p."ownerId"
+          LEFT JOIN "Owner" o ON o.id = p."ownerId"
           ORDER BY p.id DESC
           LIMIT 25
         `;
         return ok(rows);
       }
 
-      // 2) SELECT AVG with GROUP BY (JOINs)
-      case "avg_sale_price_by_neighborhood": {
+      // 2) SELECT AVG with GROUP BY: avg sale price by ZIP
+      case "avg_sale_price_by_zip": {
         const rows = await prisma.$queryRaw`
-          SELECT n.code,
-                 n.name,
-                 AVG(s.price)::numeric(12,2) AS avg_price
-          FROM "Sale" s
-          JOIN "Property"    p ON p.id = s."propertyId"
-          JOIN "Neighborhood" n ON n.id = p."neighborhoodId"
-          GROUP BY n.code, n.name
-          ORDER BY avg_price DESC
+            SELECT
+                p."zipCode"::text AS zip_code,
+                AVG(s.price)::numeric(12,2) AS avg_price
+            FROM "Sale" s
+            JOIN "Property" p ON p.id = s."propertyId"
+            WHERE p."zipCode" IS NOT NULL
+            GROUP BY p."zipCode"::text
+            ORDER BY p."zipCode"::text ASC
         `;
         return ok(rows);
-      }
+    }
 
-      // 3) SELECT with condition (folio)
+      // 3) List all properties ordered by folio (no condition)
       case "property_by_folio": {
-        if (!folio) return bad("folio is required");
         const rows = await prisma.$queryRaw`
           SELECT *
           FROM "Property"
-          WHERE folio = ${folio}
+          ORDER BY folio ASC
         `;
         return ok(rows);
       }
 
-      // 4) SELECT with year filter and JOINs
-      case "sales_in_year": {
-        const yr = year ?? new Date().getFullYear();
+      // 4) SELECT of all sales with JOINs
+      case "sales_history": {
         const rows = await prisma.$queryRaw`
-          SELECT s.id,
-                 s.price,
+          SELECT 
                  s."saleDate",
+                 s.id,
+                 s.price,
                  p.folio,
+                 p."zipCode" AS zip_code,
                  o.name AS owner_name
           FROM "Sale" s
           JOIN "Property" p ON p.id = s."propertyId"
           LEFT JOIN "Owner" o ON o.id = p."ownerId"
-          WHERE EXTRACT(YEAR FROM s."saleDate") = ${yr}
           ORDER BY s."saleDate" DESC
         `;
         return ok(rows);
@@ -148,7 +138,8 @@ export async function GET(req: Request) {
           SELECT s.id,
                  s.price,
                  s."saleDate",
-                 p.folio
+                 p.folio,
+                 p."zipCode" AS zip_code
           FROM "Sale" s
           JOIN "Property" p ON p.id = s."propertyId"
           WHERE s.price > (SELECT AVG(price) FROM "Sale")
@@ -228,7 +219,8 @@ export async function POST(req: Request) {
           SELECT s.id,
                  s.price,
                  s."saleDate",
-                 p.folio
+                 p.folio,
+                 p."zipCode" AS zip_code
           FROM "Sale" s
           JOIN "Property" p ON p.id = s."propertyId"
           WHERE s."saleDate" BETWEEN ${p.start} AND ${p.end}
