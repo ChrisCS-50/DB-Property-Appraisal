@@ -2,33 +2,7 @@
 
 Final Project – COP4710: Database Management
 
-This application is a full-stack property appraisal tool designed for storing, updating, querying, and reporting property-related data. It uses:
-
-Next.js 14 (App Router)
-
-Prisma ORM
-
-PostgreSQL (NeonDB)
-
-TailwindCSS + ShadCN UI
-
-A complete relational database with:
-
-Property
-
-Owner
-
-Assessment
-
-Sale
-
-Improvement
-
-User (auth-ready)
-
-A reporting API powered by SQL queries & materialized view
-
-A stored procedure for bulk land-value adjustments
+This application is a full-stack property appraisal tool designed for storing, updating, querying, and reporting property-related data. 
 
 🚀 Features
 ✔ Full CRUD for Properties
@@ -83,29 +57,29 @@ prisma/
 README.md                   # This file
 
 ⚙️ Installation & Setup
-1️⃣ Clone the Repo
+1️ Clone the Repo
 git clone https://github.com/ChrisCS-50/DB-Property-Appraisal/tree/main-v2
 
-2️⃣ Install Dependencies
+2️ Install Dependencies
 npm install
 
-3️⃣ Create .env.local
+3️ Create .env.local
 DATABASE_URL="postgres://<user>:<password>@<host>/<dbname>?sslmode=require"
 
-4️⃣ Sync Prisma
+4️ Sync Prisma
 npx prisma db pull
 npx prisma generate
 
-5️⃣ Start Application
+5️ Start Application
 npm run dev
 
-🗄️ Database Schema (FULL SQL)
+Database Schema (FULL SQL)
 
 This section provides ALL SQL needed to completely rebuild the database as required by this version of the application.
 
 Run these SQL blocks in order on your NeonDB console.
 
-🔷 1. ENUM: User Role
+1. ENUM: User Role
 DO $$
 BEGIN
   IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'Role') THEN
@@ -113,7 +87,7 @@ BEGIN
   END IF;
 END$$;
 
-🔷 2. OWNER TABLE
+2. OWNER TABLE
 DROP TABLE IF EXISTS "Owner" CASCADE;
 CREATE TABLE "Owner" (
   id    SERIAL PRIMARY KEY,
@@ -124,7 +98,7 @@ CREATE TABLE "Owner" (
 
 CREATE INDEX "Owner_name_idx" ON "Owner"(name);
 
-🔷 3. PROPERTY TABLE
+3. PROPERTY TABLE
 
 Includes zipCode and no longer references Neighborhood.
 
@@ -148,7 +122,7 @@ CREATE INDEX "Property_ownerId_idx"       ON "Property"("ownerId");
 CREATE INDEX "Property_landValue_idx"     ON "Property"("landValue");
 CREATE INDEX "Property_buildingValue_idx" ON "Property"("buildingValue");
 
-🔷 4. ASSESSMENT TABLE
+4. ASSESSMENT TABLE
 DROP TABLE IF EXISTS "Assessment" CASCADE;
 CREATE TABLE "Assessment" (
   id           SERIAL PRIMARY KEY,
@@ -169,7 +143,7 @@ CREATE TABLE "Assessment" (
 CREATE INDEX "Assessment_propertyId_idx" ON "Assessment"("propertyId");
 CREATE INDEX "Assessment_year_idx"       ON "Assessment"(year);
 
-🔷 5. IMPROVEMENT TABLE
+5. IMPROVEMENT TABLE
 DROP TABLE IF EXISTS "Improvement" CASCADE;
 CREATE TABLE "Improvement" (
   id          SERIAL PRIMARY KEY,
@@ -185,7 +159,7 @@ CREATE TABLE "Improvement" (
 CREATE INDEX "Improvement_propertyId_idx" ON "Improvement"("propertyId");
 CREATE INDEX "Improvement_type_idx"       ON "Improvement"(type);
 
-🔷 6. SALE TABLE
+6. SALE TABLE
 DROP TABLE IF EXISTS "Sale" CASCADE;
 CREATE TABLE "Sale" (
   id          SERIAL PRIMARY KEY,
@@ -205,7 +179,7 @@ CREATE INDEX "Sale_propertyId_idx" ON "Sale"("propertyId");
 CREATE INDEX "Sale_saleDate_idx"   ON "Sale"("saleDate");
 CREATE INDEX "Sale_price_idx"      ON "Sale"(price);
 
-🔷 7. USER TABLE
+7. USER TABLE
 DROP TABLE IF EXISTS "User" CASCADE;
 CREATE TABLE "User" (
   id         SERIAL PRIMARY KEY,
@@ -220,7 +194,7 @@ CREATE TABLE "User" (
 CREATE UNIQUE INDEX "User_email_key" ON "User"(email);
 CREATE INDEX        "User_email_idx" ON "User"(email);
 
-🔷 8. SUMMARY VIEW (UPDATED)
+8. SUMMARY VIEW (UPDATED)
 
 We removed all Neighborhood fields and added zipCode.
 
@@ -256,7 +230,7 @@ LEFT JOIN LATERAL (
   LIMIT 1
 ) a ON TRUE;
 
-🔷 9. STORED PROCEDURE
+9. STORED PROCEDURE
 
 Bulk Land Value Adjustment by ZIP Code
 
@@ -275,52 +249,11 @@ BEGIN
 END;
 $$;
 
-🧪 Sample Data (Optional)
+Remember to add the .env file to root with the neon db api key in this format: DATABASE_URL= '' which is found on there dashboard
+Then you can use npm run dev
 
-You may insert your own or use generated seed data.
-The app does not require seed data, but empty tables will mean empty query results until users begin inserting.
 
-🔌 API Endpoints
-Endpoint	Purpose
-/api/properties	CRUD, owner linking, sale creation, assessment creation, stored procedure execution
-/api/sql	Raw SQL reporting queries
-/api/reports/summary	Returns v_property_summary view
-🖥 UI Actions Supported
-CRUD
 
-Insert / Upsert property (+ owner / assessment / sale)
-
-Get property by folio
-
-Range search by landValue
-
-Update address
-
-Adjust land value %
-
-Delete by folio
-
-Count above buildingValue threshold
-
-SQL Reports
-
-Rendered inside the UI Result panel:
-
-Properties with owner
-
-Avg sale price by zip
-
-Property list (all folios)
-
-Sales history
-
-Stored Procedure
-
-Executed through UI input:
-
-Bulk land value adjust by ZIP and percent
-
-📝 Developer Notes
 If the DB Schema Changes
 
 Run:
