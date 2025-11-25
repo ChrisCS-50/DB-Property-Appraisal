@@ -198,7 +198,7 @@ CREATE TABLE "Sale" (
   CONSTRAINT sale_price_nonnegative CHECK (price >= 0),
   CONSTRAINT "Sale_propertyId_fkey"
     FOREIGN KEY ("propertyId") REFERENCES "Property"(id)
-    ON UPDATE CASCADE ON DELETE RESTRICT
+    ON UPDATE CASCADE ON DELETE CASCADE
 );
 
 CREATE INDEX "Sale_propertyId_idx" ON "Sale"("propertyId");
